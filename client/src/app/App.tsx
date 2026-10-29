@@ -10,6 +10,7 @@ import { AthletesPage } from '../pages/AthletesPage'
 import { CalendarPage } from '../pages/CalendarPage'
 import { ReportsPage } from '../pages/ReportsPage'
 import { LoginPage, RegisterPage } from '../pages/AuthPages'
+import { trainer } from '../shared/demoData'
 import { theme } from '../shared/theme'
 
 const navigation = [
@@ -37,6 +38,9 @@ function Layout() {
               <MenuItem value="athlete">Спортсмен</MenuItem>
             </Select>
           </FormControl>
+          {role === 'trainer' && <Typography variant="body2" color="text.secondary">
+            {trainer.name}
+          </Typography>}
           {role === 'athlete' && <FormControl size="small">
             <Select aria-label="Демонстрационный спортсмен" value={athleteId}
               onChange={(event) => setAthleteId(Number(event.target.value))} sx={{ minWidth: 170 }}>

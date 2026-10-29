@@ -12,6 +12,7 @@ pytestmark = pytest.mark.unit
     ('Иванова', (None, ('Иванова',))),
     (' Мария   Иванова ', (None, ('Мария', 'Иванова'))),
     ('Иванова Мария', (None, ('Иванова', 'Мария'))),
+    ('  Соколова  Мария   Андреевна  ', (None, ('Соколова', 'Мария', 'Андреевна'))),
     ('²', (None, ('²',))),
 ])
 def test_prepare_search(query, expected):
@@ -28,6 +29,12 @@ def test_text_search_uses_case_insensitive_terms():
     compiled = search_clause('мАрИя ИВАНОВА').compile(dialect=postgresql.dialect())
     assert str(compiled).count('ILIKE') == 2
     assert set(compiled.params.values()) == {'%мАрИя%', '%ИВАНОВА%'}
+
+
+def test_patronymic_search_is_case_insensitive():
+    compiled = search_clause('Андреевна').compile(dialect=postgresql.dialect())
+    assert 'ILIKE' in str(compiled)
+    assert list(compiled.params.values()) == ['%Андреевна%']
 
 
 def test_like_metacharacters_are_escaped():

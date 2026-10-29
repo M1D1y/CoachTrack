@@ -3,6 +3,7 @@ import pytest
 from app.db.base import Base
 from app.main import app
 from app import models  # Ensure all SQLAlchemy tables are registered.
+from app.models import User
 
 pytestmark = pytest.mark.unit
 
@@ -51,3 +52,4 @@ def test_openapi_routes_are_preserved():
 
 def test_alembic_metadata_sees_all_tables():
     assert set(Base.metadata.tables) == {'users', 'invitations', 'refresh_tokens', 'trainings', 'injuries', 'nutrition'}
+    assert 'uq_users_name_normalized' in {index.name for index in User.__table__.indexes}

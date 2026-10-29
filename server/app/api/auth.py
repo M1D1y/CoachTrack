@@ -13,12 +13,12 @@ router = APIRouter()
 
 @router.post('/auth/register', response_model=UserOut, status_code=201, tags=['auth'])
 def register(body: Register, db: Session = Depends(get_db)):
-    return auth_service.register(db, body.name, body.password, body.role)
+    return auth_service.register(db, body)
 
 
 @router.post('/auth/login', response_model=TokenPair, tags=['auth'])
 def login(body: Login, db: Session = Depends(get_db)):
-    return auth_service.login(db, body.id, body.password)
+    return auth_service.login(db, body.name, body.password)
 
 
 @router.post('/auth/refresh', response_model=TokenPair, tags=['auth'])

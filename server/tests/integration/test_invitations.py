@@ -8,10 +8,10 @@ pytestmark = pytest.mark.integration
 
 def test_invitation_rejection_and_permissions(client):
     c = client
-    ta = register(c, 'Тренер А', 'trainer')
-    tb = register(c, 'Тренер Б', 'trainer')
-    a = register(c, 'Мария Иванова', 'athlete')
-    other = register(c, 'Анна Кузнецова', 'athlete')
+    ta = register(c, 'Орлов Алексей Анатольевич', 'trainer')
+    tb = register(c, 'Орлов Борис Анатольевич', 'trainer')
+    a = register(c, 'Иванова Мария Андреевна', 'athlete')
+    other = register(c, 'Кузнецова Анна Павловна', 'athlete')
     t = login(c, ta)['access_token']
     t2 = login(c, tb)['access_token']
     at = login(c, a)['access_token']
@@ -31,8 +31,8 @@ def test_invitation_rejection_and_permissions(client):
     assert c.post('/api/v1/invitations', json={'athlete_id': ta}, headers=auth(t)).status_code == 404
 
 def test_cancel_invitation(client):
-    trainer = register(client, 'Тренер', 'trainer')
-    athlete = register(client, 'Спортсмен', 'athlete')
+    trainer = register(client, 'Смирнов Алексей Сергеевич', 'trainer')
+    athlete = register(client, 'Иванова Мария Андреевна', 'athlete')
     token = login(client, trainer)['access_token']
     athlete_token = login(client, athlete)['access_token']
     invitation_id = invite(client, token, athlete)
@@ -42,9 +42,9 @@ def test_cancel_invitation(client):
 
 def test_concurrent_accept(client):
     c = client
-    ta = register(c, 'Тренер А', 'trainer')
-    tb = register(c, 'Тренер Б', 'trainer')
-    a = register(c, 'Мария Иванова', 'athlete')
+    ta = register(c, 'Орлов Алексей Анатольевич', 'trainer')
+    tb = register(c, 'Орлов Борис Анатольевич', 'trainer')
+    a = register(c, 'Иванова Мария Андреевна', 'athlete')
     t = login(c, ta)['access_token']
     t2 = login(c, tb)['access_token']
     at = login(c, a)['access_token']
@@ -61,8 +61,8 @@ def test_concurrent_accept(client):
     assert c.get('/api/v1/team/my-trainer', headers=auth(at)).json()['id'] in [ta, tb]
 
 def test_sent_invitations_and_cancel(client):
-    trainer = register(client, 'Тренер', 'trainer')
-    athlete = register(client, 'Спортсмен', 'athlete')
+    trainer = register(client, 'Смирнов Алексей Сергеевич', 'trainer')
+    athlete = register(client, 'Иванова Мария Андреевна', 'athlete')
     token = login(client, trainer)['access_token']
     invitation_id = invite(client, token, athlete)
     sent = client.get('/api/v1/invitations/sent', headers=auth(token))

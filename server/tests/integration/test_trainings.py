@@ -3,9 +3,9 @@ pytestmark = pytest.mark.integration
 from .helpers import attach, auth, login, register, week
 
 def test_training_crud_week_and_attendance(client):
-    trainer = register(client, 'Тренер', 'trainer')
-    athlete = register(client, 'Спортсмен', 'athlete')
-    other_trainer = register(client, 'Другой тренер', 'trainer')
+    trainer = register(client, 'Смирнов Алексей Сергеевич', 'trainer')
+    athlete = register(client, 'Иванова Мария Андреевна', 'athlete')
+    other_trainer = register(client, 'Петров Сергей Андреевич', 'trainer')
     token = login(client, trainer)['access_token']
     athlete_token = login(client, athlete)['access_token']
     other_token = login(client, other_trainer)['access_token']

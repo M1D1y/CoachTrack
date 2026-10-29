@@ -4,10 +4,10 @@ pytestmark = pytest.mark.integration
 
 def test_full_lifecycle_and_crud(client):
     c = client
-    ta = register(c, 'Тренер А', 'trainer')
-    tb = register(c, 'Тренер Б', 'trainer')
-    a = register(c, 'Мария Иванова', 'athlete')
-    other = register(c, 'Другой Спортсмен', 'athlete')
+    ta = register(c, 'Орлов Алексей Анатольевич', 'trainer')
+    tb = register(c, 'Орлов Борис Анатольевич', 'trainer')
+    a = register(c, 'Иванова Мария Андреевна', 'athlete')
+    other = register(c, 'Петров Илья Сергеевич', 'athlete')
     t = login(c, ta)['access_token']
     t2 = login(c, tb)['access_token']
     at = login(c, a)['access_token']

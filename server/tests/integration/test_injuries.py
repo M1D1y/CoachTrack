@@ -6,9 +6,9 @@ pytestmark = pytest.mark.integration
 
 
 def test_injury_crud_and_permissions(client):
-    trainer = register(client, 'Тренер', 'trainer')
-    athlete = register(client, 'Спортсмен', 'athlete')
-    outsider = register(client, 'Чужой спортсмен', 'athlete')
+    trainer = register(client, 'Смирнов Алексей Сергеевич', 'trainer')
+    athlete = register(client, 'Иванова Мария Андреевна', 'athlete')
+    outsider = register(client, 'Соколова Анна Сергеевна', 'athlete')
     trainer_token = login(client, trainer)['access_token']
     athlete_token = login(client, athlete)['access_token']
     outsider_token = login(client, outsider)['access_token']

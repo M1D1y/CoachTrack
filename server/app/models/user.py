@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db.base import Base
@@ -24,3 +24,16 @@ class User(Base):
         CheckConstraint("role in ('trainer','athlete')", name='user_role'),
         CheckConstraint("role = 'athlete' OR trainer_id IS NULL", name='trainer_no_trainer'),
     )
+
+
+def normalized_name_sql(value=None):
+    source = User.name if value is None else value
+    collapsed = func.btrim(func.regexp_replace(source, '[[:space:]]+', ' ', 'g'))
+    return func.translate(
+        func.lower(collapsed),
+        'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ',
+        'абвгдеёжзийклмнопрстуфхцчшщъыьэюя',
+    )
+
+
+Index('uq_users_name_normalized', normalized_name_sql(), unique=True)

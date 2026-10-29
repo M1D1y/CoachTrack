@@ -8,20 +8,23 @@ from app.schemas.training import AttendanceUpdate, TrainingCreate
 pytestmark = pytest.mark.unit
 
 
-@pytest.mark.parametrize('name', ['', '   '])
-def test_registration_rejects_blank_name(name):
+@pytest.mark.parametrize('field', ['last_name', 'first_name', 'patronymic'])
+@pytest.mark.parametrize('value', ['', '   ', 'Мария1', 'Мария Иванова', 'А' * 61])
+def test_registration_rejects_invalid_name_part(field, value):
+    data = {'last_name': 'Соколова', 'first_name': 'Мария', 'patronymic': 'Андреевна'}
+    data[field] = value
     with pytest.raises(ValidationError):
-        Register(name=name, password='StrongPassword123!', role='athlete')
+        Register(**data, password='StrongPassword123!', role='athlete')
 
 
 def test_registration_rejects_short_password():
     with pytest.raises(ValidationError):
-        Register(name='Мария', password='short', role='athlete')
+        Register(last_name='Соколова', first_name='Мария', patronymic='Андреевна', password='short', role='athlete')
 
 
 def test_registration_rejects_unknown_role():
     with pytest.raises(ValidationError):
-        Register(name='Мария', password='StrongPassword123!', role='admin')
+        Register(last_name='Соколова', first_name='Мария', patronymic='Андреевна', password='StrongPassword123!', role='admin')
 
 
 def test_training_rejects_negative_duration():

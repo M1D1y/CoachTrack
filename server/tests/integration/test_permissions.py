@@ -6,10 +6,10 @@ pytestmark = pytest.mark.integration
 
 
 def test_cross_team_and_cross_athlete_access(client):
-    trainer_a = register(client, 'Тренер А', 'trainer')
-    trainer_b = register(client, 'Тренер Б', 'trainer')
-    athlete_a = register(client, 'Спортсмен А', 'athlete')
-    athlete_b = register(client, 'Спортсмен Б', 'athlete')
+    trainer_a = register(client, 'Орлов Алексей Анатольевич', 'trainer')
+    trainer_b = register(client, 'Орлов Борис Анатольевич', 'trainer')
+    athlete_a = register(client, 'Сидоров Артём Иванович', 'athlete')
+    athlete_b = register(client, 'Сидорова Анна Ивановна', 'athlete')
     token_a = login(client, trainer_a)['access_token']
     token_b = login(client, trainer_b)['access_token']
     athlete_token_a = login(client, athlete_a)['access_token']
@@ -33,9 +33,9 @@ def test_cross_team_and_cross_athlete_access(client):
 
 
 def test_other_athlete_cannot_accept_invitation(client):
-    trainer = register(client, 'Тренер', 'trainer')
-    athlete = register(client, 'Спортсмен', 'athlete')
-    other = register(client, 'Другой', 'athlete')
+    trainer = register(client, 'Смирнов Алексей Сергеевич', 'trainer')
+    athlete = register(client, 'Иванова Мария Андреевна', 'athlete')
+    other = register(client, 'Петров Илья Андреевич', 'athlete')
     trainer_token = login(client, trainer)['access_token']
     other_token = login(client, other)['access_token']
     invitation_id = invite(client, trainer_token, athlete)

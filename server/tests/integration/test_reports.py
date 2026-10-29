@@ -6,9 +6,9 @@ pytestmark = pytest.mark.integration
 
 
 def test_aggregates_from_postgresql(client):
-    trainer = register(client, 'Тренер', 'trainer')
-    athlete = register(client, 'Спортсмен', 'athlete')
-    other = register(client, 'Без тренера', 'athlete')
+    trainer = register(client, 'Смирнов Алексей Сергеевич', 'trainer')
+    athlete = register(client, 'Иванова Мария Андреевна', 'athlete')
+    other = register(client, 'Кузнецов Илья Сергеевич', 'athlete')
     trainer_token = login(client, trainer)['access_token']
     athlete_token = login(client, athlete)['access_token']
     other_token = login(client, other)['access_token']
