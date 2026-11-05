@@ -1,5 +1,6 @@
 import hashlib
 import secrets
+from uuid import UUID
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -33,14 +34,14 @@ def generate_refresh_token() -> str:
 def access_token(user: User) -> str:
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings().access_token_expire_minutes)
     return jwt.encode(
-        {'sub': str(user.id), 'exp': expires_at, 'type': 'access'},
+        {'sub': str(user.public_id), 'exp': expires_at, 'type': 'access'},
         settings().jwt_secret_key,
         algorithm='HS256',
     )
 
 
-def decode_access_token(token: str) -> int:
+def decode_access_token(token: str) -> UUID:
     payload = jwt.decode(token, settings().jwt_secret_key, algorithms=['HS256'])
     if payload.get('type') != 'access':
         raise ValueError('Invalid token type')
-    return int(payload['sub'])
+    return UUID(payload['sub'])

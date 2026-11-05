@@ -1,57 +1,64 @@
-import { Alert, Box, Button, Fade, Stack, TextField, Typography } from '@mui/material'
-import { useState, type FormEvent } from 'react'
-import type { Athlete } from '../entities/types'
-import { matchesAthlete } from '../shared/search'
-import { useDemoTeam } from './demoTeam'
+import { Alert, Box, Button, Chip, CircularProgress, Stack, TextField, Typography } from '@mui/material'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import type { SearchUser } from '../entities/types'
+import { api } from '../shared/api/client'
 
-export function InviteForm() {
-  const { athletes, invite } = useDemoTeam()
+const labels = { available: 'Можно пригласить', pending: 'Приглашение отправлено', team: 'В команде', unavailable: 'Уже есть тренер' }
+
+export function InviteForm({ onChanged }: { onChanged: () => void }) {
   const [query, setQuery] = useState('')
+  const [results, setResults] = useState<SearchUser[]>([])
+  const [searched, setSearched] = useState(false)
+  const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
-  const [choices, setChoices] = useState<Athlete[]>([])
-
-  const send = (athlete: Athlete) => {
-    const result = invite(athlete.id)
-    setError(result.ok ? '' : result.message)
-    setMessage(result.ok ? result.message : '')
-    setChoices([])
-    if (result.ok) setQuery('')
-  }
-
-  const submit = (event: FormEvent) => {
+  const searchController = useRef<AbortController | null>(null)
+  useEffect(() => () => searchController.current?.abort(), [])
+  const search = async (event: FormEvent) => {
     event.preventDefault()
-    setMessage('')
-    setChoices([])
-    if (!query.trim()) {
-      setError('Введите ID или ФИО спортсмена.')
+    searchController.current?.abort()
+    const controller = new AbortController()
+    searchController.current = controller
+    setError(''); setMessage('')
+    const value = query.trim().replace(/\s+/g, ' ')
+    if ((value.match(/\p{L}/gu) ?? []).length < 3) {
+      setError('Введите не менее трёх букв ФИО.')
       return
     }
-    const matches = athletes.filter((athlete) => matchesAthlete(athlete, query))
-    if (matches.length === 0) {
-      setError('Спортсмен не найден. Проверьте ID или имя.')
-    } else if (matches.length === 1) {
-      send(matches[0])
-    } else {
-      setError('Найдено несколько спортсменов. Выберите нужного по ID.')
-      setChoices(matches)
-    }
+    setBusy(true)
+    try {
+      const found = await api<SearchUser[]>(`/athletes/search?q=${encodeURIComponent(value)}`, { signal: controller.signal })
+      if (!controller.signal.aborted) { setResults(found); setSearched(true) }
+    } catch (cause) { if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : 'Поиск не удался') }
+    finally { if (!controller.signal.aborted) setBusy(false) }
   }
-
-  return <Box component="form" onSubmit={submit}>
-    <Typography variant="h6" gutterBottom>Пригласить спортсмена</Typography>
-    <Typography color="text.secondary" sx={{ mb: 2 }}>Демо-приглашение по ID или ФИО внутри приложения.</Typography>
-    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-      <TextField label="ID или ФИО спортсмена" size="small" fullWidth value={query}
-        error={Boolean(error)} helperText={error || undefined}
-        onChange={(event) => { setQuery(event.target.value); setError(''); setMessage(''); setChoices([]) }} />
-      <Button type="submit" variant="contained" sx={{ whiteSpace: 'nowrap' }}>Пригласить</Button>
+  const invite = async (athlete: SearchUser) => {
+    setBusy(true); setError(''); setMessage('')
+    try {
+      await api('/invitations', { method: 'POST', body: JSON.stringify({ athlete_public_id: athlete.public_id }) })
+      setMessage(`Приглашение для ${athlete.name} отправлено.`)
+      setResults((items) => items.map((item) => item.public_id === athlete.public_id ? { ...item, relationship_status: 'pending' } : item))
+      onChanged()
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Не удалось отправить приглашение') }
+    finally { setBusy(false) }
+  }
+  return <Box>
+    <Typography variant="h6" gutterBottom>Найти и пригласить спортсмена</Typography>
+    <Box component="form" onSubmit={(event) => void search(event)}><Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+      <TextField label="ФИО спортсмена" size="small" inputProps={{ maxLength: 100 }} fullWidth value={query}
+        onChange={(event) => { searchController.current?.abort(); setBusy(false); setQuery(event.target.value); setSearched(false); setResults([]); setError('') }} />
+      <Button type="submit" variant="contained" disabled={busy}>{busy ? <CircularProgress size={20} /> : 'Найти'}</Button>
+    </Stack></Box>
+    {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+    {message && <Alert severity="success" sx={{ mt: 2 }}>{message}</Alert>}
+    {searched && results.length === 0 && <Typography color="text.secondary" sx={{ mt: 2 }}>Спортсмены не найдены.</Typography>}
+    <Stack spacing={1} sx={{ mt: 2 }}>
+      {results.map((athlete) => <Box key={athlete.public_id} sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+        <Typography fontWeight={600}>{athlete.name}</Typography>
+        {athlete.sport && <Typography color="text.secondary">{athlete.sport}</Typography>}
+        <Chip size="small" label={labels[athlete.relationship_status]} />
+        <Button size="small" disabled={busy || athlete.relationship_status !== 'available'} onClick={() => void invite(athlete)}>Пригласить</Button>
+      </Box>)}
     </Stack>
-    {choices.length > 0 && <Stack spacing={1} sx={{ mt: 2 }}>
-      {choices.map((athlete) => <Button key={athlete.id} variant="outlined" onClick={() => send(athlete)}>
-        {athlete.name} · ID {athlete.id}
-      </Button>)}
-    </Stack>}
-    {message && <Fade in><Alert severity="success" sx={{ mt: 2 }}>{message}</Alert></Fade>}
   </Box>
 }

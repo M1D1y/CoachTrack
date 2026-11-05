@@ -3,134 +3,95 @@ import {
   InputLabel, Link, MenuItem, Select, Stack, TextField, Typography,
 } from '@mui/material'
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { Link as RouterLink, useNavigate } from 'react-router-dom'
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom'
 import type { Role } from '../entities/types'
-import { useDemoRole } from '../features/demoRole'
-import { useDemoTeam } from '../features/demoTeam'
-import { initialAthleteId, trainer } from '../shared/demoData'
+import { useAuth } from '../features/auth'
 import { normalizeFullName, validNamePart } from '../shared/search'
 
 function AuthShell({ title, children }: { title: string; children: ReactNode }) {
-  return <Container maxWidth="sm" sx={{ py: { xs: 4, sm: 8 } }}>
-    <Card><CardContent sx={{ p: { xs: 3, sm: 5 } }}>
-      <Typography variant="h5" component="h1" gutterBottom>{title}</Typography>
-      <Alert severity="info" sx={{ mb: 3 }}>
-        Демонстрационный режим: учётные записи не создаются, пароль не проверяется и нигде не сохраняется.
-      </Alert>
-      {children}
-    </CardContent></Card>
-  </Container>
-}
-
-function validRole(role: string): role is Role {
-  return role === 'trainer' || role === 'athlete'
+  return <Container maxWidth="sm" sx={{ py: { xs: 4, sm: 8 } }}><Card><CardContent sx={{ p: { xs: 3, sm: 5 } }}>
+    <Typography variant="h5" component="h1" gutterBottom>{title}</Typography>{children}
+  </CardContent></Card></Container>
 }
 
 export function LoginPage() {
-  const { setRole, setAthleteId } = useDemoRole()
-  const { athletes } = useDemoTeam()
+  const { login } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const logoutError = (location.state as { logoutError?: string } | null)?.logoutError
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
   const [attempted, setAttempted] = useState(false)
-  const [accountError, setAccountError] = useState('')
-
-  const nameParts = normalizeFullName(name).split(' ')
-  const validName = nameParts.length === 3 && nameParts.every(validNamePart)
-  const nameError = attempted && !validName ? 'Введите фамилию, имя и отчество.' : ''
-  const passwordError = attempted && !password.trim() ? 'Введите пароль.' : ''
-
-  const submit = (event: FormEvent) => {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const validName = normalizeFullName(name).split(' ').length >= 2
+  const submit = async (event: FormEvent) => {
     event.preventDefault()
     setAttempted(true)
-    setAccountError('')
-    if (!validName || !password.trim()) return
-
-    const key = normalizeFullName(name)
-    if (key === normalizeFullName(trainer.name)) {
-      setRole('trainer')
-    } else {
-      const athlete = athletes.find((item) => normalizeFullName(item.name) === key)
-      if (!athlete) {
-        setAccountError('Такого демонстрационного пользователя нет. Выберите ФИО из списка профилей.')
-        return
-      }
-      setAthleteId(athlete.id)
-      setRole('athlete')
-    }
-    navigate('/athletes')
+    setError('')
+    if (!validName || !password) return
+    setBusy(true)
+    try { await login(name, password); navigate('/athletes', { replace: true }) }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'Не удалось войти') }
+    finally { setBusy(false) }
   }
-
-  return <AuthShell title="Вход"><Box component="form" onSubmit={submit} noValidate><Stack spacing={2}>
-    <TextField label="ФИО пользователя" autoComplete="name" value={name}
-      onChange={(event) => { setName(event.target.value); setAccountError('') }}
-      error={Boolean(nameError || accountError)} helperText={nameError || accountError} fullWidth />
+  return <AuthShell title="Вход"><Box component="form" onSubmit={(event) => void submit(event)} noValidate><Stack spacing={2}>
+    {logoutError && <Alert severity="warning">{logoutError}</Alert>}
+    {error && <Alert severity="error">{error}</Alert>}
+    <TextField label="ФИО пользователя" autoComplete="name" value={name} onChange={(event) => setName(event.target.value)}
+      error={attempted && !validName} helperText={attempted && !validName ? 'Введите полное имя.' : ''} fullWidth />
     <TextField label="Пароль" type="password" autoComplete="current-password" value={password}
-      onChange={(event) => setPassword(event.target.value)} error={Boolean(passwordError)} helperText={passwordError} fullWidth />
-    <Typography variant="body2" color="text.secondary">
-      Для демо-входа используйте, например, «Смирнов Алексей Сергеевич» или «Соколова Мария Андреевна».
-      Пароль здесь не проверяется.
-    </Typography>
-    <Button type="submit" variant="contained">Войти в демо-режим</Button>
+      onChange={(event) => setPassword(event.target.value)} error={attempted && !password}
+      helperText={attempted && !password ? 'Введите пароль.' : ''} fullWidth />
+    <Button type="submit" variant="contained" disabled={busy}>{busy ? 'Вход…' : 'Войти'}</Button>
     <Typography textAlign="center">Нет аккаунта? <Link component={RouterLink} to="/register">Регистрация</Link></Typography>
   </Stack></Box></AuthShell>
 }
 
 export function RegisterPage() {
-  const { setRole, setAthleteId } = useDemoRole()
+  const { register } = useAuth()
   const navigate = useNavigate()
   const [lastName, setLastName] = useState('')
   const [firstName, setFirstName] = useState('')
   const [patronymic, setPatronymic] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
-  const [role, chooseRole] = useState<Role>('athlete')
+  const [role, setRole] = useState<Role>('athlete')
   const [attempted, setAttempted] = useState(false)
-
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
   const partError = (value: string, label: string) => attempted && !validNamePart(value)
-    ? (value.trim() ? 'Используйте буквы и дефис, не более 60 символов.' : `Введите ${label}.`)
-    : ''
-  const lastNameError = partError(lastName, 'фамилию')
-  const firstNameError = partError(firstName, 'имя')
-  const patronymicError = partError(patronymic, 'отчество')
-  const passwordError = attempted && password.length < 8 ? 'Пароль должен содержать минимум 8 символов.' : ''
-  const confirmError = attempted && !confirm
-    ? 'Подтвердите пароль.'
-    : attempted && confirm !== password ? 'Пароли не совпадают.' : ''
-  const roleError = attempted && !validRole(role) ? 'Выберите допустимую роль.' : ''
-
-  const submit = (event: FormEvent) => {
+    ? (value.trim() ? 'Используйте буквы и дефис, не более 60 символов.' : `Введите ${label}.`) : ''
+  const submit = async (event: FormEvent) => {
     event.preventDefault()
     setAttempted(true)
-    if (![lastName, firstName, patronymic].every(validNamePart) || password.length < 8 ||
-      !confirm || password !== confirm || !validRole(role)) return
-
-    if (role === 'athlete') setAthleteId(initialAthleteId)
-    setRole(role)
-    navigate('/athletes')
+    setError('')
+    if (![lastName, firstName, patronymic].every(validNamePart) || password.length < 8 || password.length > 128 || password !== confirm) return
+    setBusy(true)
+    try {
+      await register({ last_name: lastName.trim(), first_name: firstName.trim(), patronymic: patronymic.trim(), password, role })
+      navigate('/athletes', { replace: true })
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Не удалось зарегистрироваться') }
+    finally { setBusy(false) }
   }
-
-  return <AuthShell title="Регистрация"><Box component="form" onSubmit={submit} noValidate><Stack spacing={2}>
-    <TextField label="Фамилия" autoComplete="family-name" value={lastName}
-      onChange={(event) => setLastName(event.target.value)} error={Boolean(lastNameError)} helperText={lastNameError} fullWidth />
-    <TextField label="Имя" autoComplete="given-name" value={firstName}
-      onChange={(event) => setFirstName(event.target.value)} error={Boolean(firstNameError)} helperText={firstNameError} fullWidth />
-    <TextField label="Отчество" autoComplete="additional-name" value={patronymic}
-      onChange={(event) => setPatronymic(event.target.value)} error={Boolean(patronymicError)} helperText={patronymicError} fullWidth />
-    <TextField label="Пароль" type="password" autoComplete="new-password" value={password}
-      onChange={(event) => setPassword(event.target.value)} error={Boolean(passwordError)} helperText={passwordError} fullWidth />
-    <TextField label="Подтверждение пароля" type="password" autoComplete="new-password" value={confirm}
-      onChange={(event) => setConfirm(event.target.value)} error={Boolean(confirmError)} helperText={confirmError} fullWidth />
-    <FormControl fullWidth error={Boolean(roleError)}>
-      <InputLabel id="register-role">Роль</InputLabel>
-      <Select labelId="register-role" value={role} label="Роль"
-        onChange={(event) => { if (validRole(event.target.value)) chooseRole(event.target.value) }}>
-        <MenuItem value="trainer">Тренер</MenuItem>
-        <MenuItem value="athlete">Спортсмен</MenuItem>
-      </Select>
-      {roleError && <FormHelperText>{roleError}</FormHelperText>}
+  return <AuthShell title="Регистрация"><Box component="form" onSubmit={(event) => void submit(event)} noValidate><Stack spacing={2}>
+    {error && <Alert severity="error">{error}</Alert>}
+    <TextField label="Фамилия" autoComplete="family-name" value={lastName} onChange={(event) => setLastName(event.target.value)}
+      error={Boolean(partError(lastName, 'фамилию'))} helperText={partError(lastName, 'фамилию')} fullWidth />
+    <TextField label="Имя" autoComplete="given-name" value={firstName} onChange={(event) => setFirstName(event.target.value)}
+      error={Boolean(partError(firstName, 'имя'))} helperText={partError(firstName, 'имя')} fullWidth />
+    <TextField label="Отчество" autoComplete="additional-name" value={patronymic} onChange={(event) => setPatronymic(event.target.value)}
+      error={Boolean(partError(patronymic, 'отчество'))} helperText={partError(patronymic, 'отчество')} fullWidth />
+    <TextField label="Пароль" type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)}
+      error={attempted && (password.length < 8 || password.length > 128)} helperText={attempted && (password.length < 8 || password.length > 128) ? 'Пароль: от 8 до 128 символов.' : ''} fullWidth />
+    <TextField label="Подтверждение пароля" type="password" autoComplete="new-password" value={confirm} onChange={(event) => setConfirm(event.target.value)}
+      error={attempted && (!confirm || confirm !== password)} helperText={attempted && (!confirm || confirm !== password) ? 'Пароли не совпадают.' : ''} fullWidth />
+    <FormControl fullWidth><InputLabel id="register-role">Роль</InputLabel>
+      <Select labelId="register-role" value={role} label="Роль" onChange={(event) => setRole(event.target.value as Role)}>
+        <MenuItem value="trainer">Тренер</MenuItem><MenuItem value="athlete">Спортсмен</MenuItem>
+      </Select><FormHelperText>Роль определяется при регистрации.</FormHelperText>
     </FormControl>
-    <Button type="submit" variant="contained">Продолжить в демо-режиме</Button>
+    <Button type="submit" variant="contained" disabled={busy}>{busy ? 'Регистрация…' : 'Зарегистрироваться'}</Button>
     <Typography textAlign="center">Уже есть аккаунт? <Link component={RouterLink} to="/login">Вход</Link></Typography>
   </Stack></Box></AuthShell>
 }

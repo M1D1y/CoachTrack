@@ -10,11 +10,13 @@ def test_training_crud_week_and_attendance(client):
     athlete_token = login(client, athlete)['access_token']
     other_token = login(client, other_trainer)['access_token']
     attach(client, token, athlete_token, athlete)
-    payload = {'athlete_id': athlete, 'date': week(), 'time': '09:00', 'duration_minutes': 45, 'title': 'Бег'}
+    payload = {'athlete_public_id': athlete, 'date': week(), 'time': '09:00', 'duration_minutes': 45, 'title': 'Бег'}
     created = client.post('/api/v1/trainings', json=payload, headers=auth(token))
     assert created.status_code == 201
     training_id = created.json()['id']
     assert created.json()['attendance'] == 'planned'
+    assert created.json()['athlete_public_id'] == athlete
+    assert 'athlete_id' not in created.json()
     assert client.get('/api/v1/trainings', params={'week_start': week()}, headers=auth(athlete_token)).json()[0]['id'] == training_id
     assert client.get(f'/api/v1/trainings/{training_id}', headers=auth(other_token)).status_code == 404
     assert client.patch(f'/api/v1/trainings/{training_id}', json={'title': 'Темп'}, headers=auth(token)).json()['title'] == 'Темп'

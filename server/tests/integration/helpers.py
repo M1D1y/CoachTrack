@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-registered_names: dict[int, str] = {}
+registered_names: dict[str, str] = {}
 
 def week():
     return (date.today() - timedelta(days=date.today().weekday())).isoformat()
@@ -18,7 +18,8 @@ def register(client, name, role):
     })
     assert response.status_code == 201, response.text
     assert 'password_hash' not in response.json()
-    user_id = response.json()['id']
+    user_id = response.json()['public_id']
+    assert 'id' not in response.json()
     assert response.json()['name'] == name
     registered_names[user_id] = name
     return user_id
@@ -33,7 +34,7 @@ def login(client, user_id):
 
 
 def invite(client, trainer_token, athlete_id):
-    response = client.post('/api/v1/invitations', json={'athlete_id': athlete_id}, headers=auth(trainer_token))
+    response = client.post('/api/v1/invitations', json={'athlete_public_id': athlete_id}, headers=auth(trainer_token))
     assert response.status_code == 201, response.text
     return response.json()['id']
 

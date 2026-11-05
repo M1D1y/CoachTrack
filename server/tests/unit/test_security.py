@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
 import jwt
 from argon2.exceptions import VerifyMismatchError
@@ -23,10 +24,11 @@ def test_argon2_password_hashing(strong_password):
 
 
 def test_access_jwt_contains_user_and_expiry():
-    user = User(id=15, name='Иванова Мария Андреевна', role='athlete', password_hash='unused')
+    public_id = uuid4()
+    user = User(id=15, public_id=public_id, name='Иванова Мария Андреевна', role='athlete', password_hash='unused')
     token = access_token(user)
     claims = jwt.decode(token, settings().jwt_secret_key, algorithms=['HS256'])
-    assert claims['sub'] == '15'
+    assert claims['sub'] == str(public_id)
     assert claims['type'] == 'access'
     assert datetime.fromtimestamp(claims['exp'], timezone.utc) > datetime.now(timezone.utc)
     assert datetime.fromtimestamp(claims['exp'], timezone.utc) <= datetime.now(timezone.utc) + timedelta(minutes=settings().access_token_expire_minutes)

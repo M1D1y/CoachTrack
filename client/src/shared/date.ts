@@ -12,3 +12,6 @@ export const addDays = (date: Date, days: number) => {
 
 export const formatDate = (date: Date, options: Intl.DateTimeFormatOptions) =>
   new Intl.DateTimeFormat('ru-RU', options).format(date)
+
+export const isoLocalDate = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`

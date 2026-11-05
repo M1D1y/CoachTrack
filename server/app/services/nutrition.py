@@ -1,13 +1,15 @@
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from uuid import UUID
 
-from ..core.dependencies import athlete_access
+from ..core.dependencies import athlete_access, athlete_by_public_id
 from ..models import Nutrition, User
 from ..schemas.nutrition import NutritionCreate, NutritionUpdate
 
 
-def list_nutrition(db: Session, user: User, athlete_id: int) -> list[Nutrition]:
+def list_nutrition(db: Session, user: User, athlete_public_id: UUID) -> list[Nutrition]:
+    athlete_id = athlete_by_public_id(db, athlete_public_id).id
     athlete_access(db, user, athlete_id)
     statement = (
         select(Nutrition).where(Nutrition.athlete_id == athlete_id)
@@ -16,7 +18,8 @@ def list_nutrition(db: Session, user: User, athlete_id: int) -> list[Nutrition]:
     return db.scalars(statement).all()
 
 
-def create_nutrition(db: Session, user: User, athlete_id: int, body: NutritionCreate) -> Nutrition:
+def create_nutrition(db: Session, user: User, athlete_public_id: UUID, body: NutritionCreate) -> Nutrition:
+    athlete_id = athlete_by_public_id(db, athlete_public_id).id
     athlete_access(db, user, athlete_id, write=True)
     item = Nutrition(athlete_id=athlete_id, **body.model_dump())
     db.add(item)

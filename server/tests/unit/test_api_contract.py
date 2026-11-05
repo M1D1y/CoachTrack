@@ -25,6 +25,7 @@ EXPECTED_ROUTES = {
     ('POST', '/api/v1/invitations'),
     ('GET', '/api/v1/invitations/incoming'),
     ('GET', '/api/v1/invitations/sent'),
+    ('DELETE', '/api/v1/invitations/sent/history'),
     ('POST', '/api/v1/invitations/{invitation_id}/accept'),
     ('POST', '/api/v1/invitations/{invitation_id}/cancel'),
     ('POST', '/api/v1/invitations/{invitation_id}/reject'),
@@ -53,3 +54,15 @@ def test_openapi_routes_are_preserved():
 def test_alembic_metadata_sees_all_tables():
     assert set(Base.metadata.tables) == {'users', 'invitations', 'refresh_tokens', 'trainings', 'injuries', 'nutrition'}
     assert 'uq_users_name_normalized' in {index.name for index in User.__table__.indexes}
+    assert 'uq_users_public_id' in {constraint.name for constraint in User.__table__.constraints}
+
+
+def test_public_schemas_do_not_expose_user_primary_keys():
+    schemas = app.openapi()['components']['schemas']
+    for name in ('UserOut', 'SearchUser', 'InvitationOut', 'TrainingOut', 'InjuryOut', 'NutritionOut'):
+        fields = schemas[name]['properties']
+        assert 'athlete_id' not in fields
+        assert 'trainer_id' not in fields
+        if name in ('UserOut', 'SearchUser'):
+            assert 'id' not in fields
+            assert 'public_id' in fields

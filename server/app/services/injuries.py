@@ -1,18 +1,21 @@
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from uuid import UUID
 
-from ..core.dependencies import athlete_access
+from ..core.dependencies import athlete_access, athlete_by_public_id
 from ..models import Injury, User
 from ..schemas.injury import InjuryCreate, InjuryUpdate
 
 
-def list_injuries(db: Session, user: User, athlete_id: int) -> list[Injury]:
+def list_injuries(db: Session, user: User, athlete_public_id: UUID) -> list[Injury]:
+    athlete_id = athlete_by_public_id(db, athlete_public_id).id
     athlete_access(db, user, athlete_id)
     return db.scalars(select(Injury).where(Injury.athlete_id == athlete_id).order_by(Injury.date.desc(), Injury.id.desc())).all()
 
 
-def create_injury(db: Session, user: User, athlete_id: int, body: InjuryCreate) -> Injury:
+def create_injury(db: Session, user: User, athlete_public_id: UUID, body: InjuryCreate) -> Injury:
+    athlete_id = athlete_by_public_id(db, athlete_public_id).id
     athlete_access(db, user, athlete_id, write=True)
     item = Injury(athlete_id=athlete_id, **body.model_dump())
     db.add(item)

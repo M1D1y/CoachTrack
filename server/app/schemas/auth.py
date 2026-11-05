@@ -36,5 +36,6 @@ class TokenPair(BaseModel):
     token_type: str = 'bearer'
 
 
-class RefreshIn(BaseModel):
-    refresh_token: str
+class AccessOut(BaseModel):
+    access_token: str
+    token_type: str = 'bearer'

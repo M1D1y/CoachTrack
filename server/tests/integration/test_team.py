@@ -14,7 +14,7 @@ def test_full_lifecycle_and_crud(client):
     ot = login(c, other)['access_token']
     attach(c, t, at, a)
     w = week()
-    training = c.post('/api/v1/trainings', json={'athlete_id': a, 'date': w, 'time': '09:00', 'duration_minutes': 45, 'title': 'Бег', 'description': 'Легко'}, headers=auth(t))
+    training = c.post('/api/v1/trainings', json={'athlete_public_id': a, 'date': w, 'time': '09:00', 'duration_minutes': 45, 'title': 'Бег', 'description': 'Легко'}, headers=auth(t))
     assert training.status_code == 201, training.text
     tid = training.json()['id']
     assert c.patch(f'/api/v1/trainings/{tid}', json={'title': 'Темповый бег'}, headers=auth(t)).json()['title'] == 'Темповый бег'
@@ -39,7 +39,7 @@ def test_full_lifecycle_and_crud(client):
     assert c.delete(f'/api/v1/team/athletes/{a}', headers=auth(t)).status_code == 204
     assert c.delete(f'/api/v1/team/athletes/{a}', headers=auth(t)).status_code == 404
     assert c.get('/api/v1/athletes', headers=auth(t)).json() == []
-    assert c.get('/api/v1/users/me', headers=auth(at)).json()['trainer_id'] is None
+    assert c.get('/api/v1/team/my-trainer', headers=auth(at)).json() is None
     assert c.get('/api/v1/trainings', headers=auth(at)).json()[0]['id'] == tid
     assert c.get(f'/api/v1/athletes/{a}/injuries', headers=auth(at)).json()[0]['id'] == iid
     assert c.get(f'/api/v1/athletes/{a}/nutrition', headers=auth(at)).json()[0]['id'] == nid
@@ -49,7 +49,7 @@ def test_full_lifecycle_and_crud(client):
     assert c.patch(f'/api/v1/trainings/{tid}', json={'title': 'Чужое'}, headers=auth(t)).status_code == 404
     assert login(c, a)['access_token']
     attach(c, t2, at, a)
-    assert c.get('/api/v1/team/my-trainer', headers=auth(at)).json()['id'] == tb
+    assert c.get('/api/v1/team/my-trainer', headers=auth(at)).json()['public_id'] == tb
     assert c.delete(f'/api/v1/trainings/{tid}', headers=auth(t2)).status_code == 204
     assert c.delete(f'/api/v1/injuries/{iid}', headers=auth(t2)).status_code == 204
     assert c.delete(f'/api/v1/nutrition/{nid}', headers=auth(t2)).status_code == 204

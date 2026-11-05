@@ -1,10 +1,11 @@
 from datetime import date, timedelta
+from uuid import UUID
 
 from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from ..core.dependencies import athlete_access
+from ..core.dependencies import athlete_access, athlete_by_public_id
 from ..models import Training, User
 
 
@@ -58,6 +59,7 @@ def user_summary(db: Session, user: User, week_start: date | None = None) -> dic
     return week_summary(db, athlete_ids, week, len(athlete_ids))
 
 
-def athlete_summary(db: Session, user: User, athlete_id: int, week_start: date | None = None) -> dict:
+def athlete_summary(db: Session, user: User, athlete_public_id: UUID, week_start: date | None = None) -> dict:
+    athlete_id = athlete_by_public_id(db, athlete_public_id).id
     athlete_access(db, user, athlete_id)
     return week_summary(db, [athlete_id], current_or_requested_week(week_start))

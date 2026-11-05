@@ -1,31 +1,27 @@
-import { Alert, Box, Button, Card, CardContent, Fade, Stack, Typography } from '@mui/material'
+import { Alert, Box, Button, Card, CardContent, Stack, Typography } from '@mui/material'
 import { useState } from 'react'
-import { trainer } from '../shared/demoData'
-import { useDemoRole } from './demoRole'
-import { useDemoTeam } from './demoTeam'
+import type { Invitation } from '../entities/types'
+import { api } from '../shared/api/client'
 
-export function IncomingInvitations() {
-  const { athleteId } = useDemoRole()
-  const { invitations, respond } = useDemoTeam()
-  const [message, setMessage] = useState('')
-  const [error, setError] = useState(false)
-  const incoming = invitations.filter((item) => item.athleteId === athleteId && item.status === 'pending')
-
-  const decide = (id: number, accepted: boolean) => {
-    const result = respond(id, athleteId, accepted)
-    setMessage(result.message)
-    setError(!result.ok)
+export function IncomingInvitations({ items, onChanged }: { items: Invitation[]; onChanged: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const decide = async (id: number, action: 'accept' | 'reject') => {
+    setBusy(true); setError('')
+    try { await api(`/invitations/${id}/${action}`, { method: 'POST' }); onChanged() }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'Не удалось ответить') }
+    finally { setBusy(false) }
   }
-
-  return <Card><CardContent>
-    <Typography variant="h6" gutterBottom>Входящие приглашения</Typography>
-    {incoming.length ? incoming.map((item) => <Box key={item.id} sx={{ py: 1 }}>
-      <Typography fontWeight={600}>{trainer.name}</Typography>
+  const pending = items.filter((item) => item.status === 'pending')
+  return <Card><CardContent><Typography variant="h6" gutterBottom>Входящие приглашения</Typography>
+    {error && <Alert severity="error">{error}</Alert>}
+    {pending.length === 0 && <Typography color="text.secondary">Приглашений нет</Typography>}
+    <Stack spacing={1}>{pending.map((item) => <Box key={item.id}>
+      <Typography fontWeight={600}>{item.trainer_name}</Typography>
       <Stack direction="row" spacing={1}>
-        <Button size="small" variant="contained" onClick={() => decide(item.id, true)}>Принять</Button>
-        <Button size="small" onClick={() => decide(item.id, false)}>Отклонить</Button>
+        <Button disabled={busy} variant="contained" onClick={() => void decide(item.id, 'accept')}>Принять</Button>
+        <Button disabled={busy} onClick={() => void decide(item.id, 'reject')}>Отклонить</Button>
       </Stack>
-    </Box>) : <Typography color="text.secondary">Новых приглашений нет</Typography>}
-    {message && <Fade in><Alert severity={error ? 'error' : 'success'} sx={{ mt: 2 }}>{message}</Alert></Fade>}
+    </Box>)}</Stack>
   </CardContent></Card>
 }

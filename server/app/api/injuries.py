@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Response
+from uuid import UUID
 from sqlalchemy.orm import Session
 
 from ..core.dependencies import current_user
@@ -11,12 +12,12 @@ router = APIRouter()
 
 
 @router.get('/athletes/{athlete_id}/injuries', response_model=list[InjuryOut], tags=['injuries'])
-def list_injuries(athlete_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def list_injuries(athlete_id: UUID, user: User = Depends(current_user), db: Session = Depends(get_db)):
     return injury_service.list_injuries(db, user, athlete_id)
 
 
 @router.post('/athletes/{athlete_id}/injuries', response_model=InjuryOut, status_code=201, tags=['injuries'])
-def create_injury(athlete_id: int, body: InjuryCreate, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def create_injury(athlete_id: UUID, body: InjuryCreate, user: User = Depends(current_user), db: Session = Depends(get_db)):
     return injury_service.create_injury(db, user, athlete_id, body)
 
 

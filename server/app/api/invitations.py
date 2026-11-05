@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
 
 from ..core.dependencies import current_user
@@ -6,7 +6,7 @@ from ..db.session import get_db
 from ..models import User
 from ..schemas.invitation import InvitationCreate, InvitationOut
 from ..services.invitations import (
-    cancel_invitation, decide_invitation, incoming_invitations,
+    cancel_invitation, clear_completed_history, decide_invitation, incoming_invitations,
     invite_athlete, sent_invitations,
 )
 
@@ -15,7 +15,7 @@ router = APIRouter()
 
 @router.post('/invitations', response_model=InvitationOut, status_code=201, tags=['invitations'])
 def invite(body: InvitationCreate, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    return invite_athlete(db, user, body.athlete_id)
+    return invite_athlete(db, user, body.athlete_public_id)
 
 
 @router.get('/invitations/incoming', response_model=list[InvitationOut], tags=['invitations'])
@@ -26,6 +26,12 @@ def incoming(user: User = Depends(current_user), db: Session = Depends(get_db)):
 @router.get('/invitations/sent', response_model=list[InvitationOut], tags=['invitations'])
 def sent(user: User = Depends(current_user), db: Session = Depends(get_db)):
     return sent_invitations(db, user)
+
+
+@router.delete('/invitations/sent/history', status_code=204, tags=['invitations'])
+def clear_sent_history(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    clear_completed_history(db, user)
+    return Response(status_code=204)
 
 
 @router.post('/invitations/{invitation_id}/accept', response_model=InvitationOut, tags=['invitations'])

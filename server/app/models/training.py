@@ -1,7 +1,8 @@
 from datetime import date, datetime, time
 
 from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Integer, String, Text, Time
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from .user import User
 
 from ..db.base import Base
 from .user import now
@@ -17,6 +18,11 @@ class Training(Base):
     description: Mapped[str] = mapped_column(Text, default='')
     attendance: Mapped[str] = mapped_column(String(20), default='planned')
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    athlete: Mapped[User] = relationship()
+
+    @property
+    def athlete_public_id(self):
+        return self.athlete.public_id
     __table_args__ = (
         CheckConstraint('duration_minutes > 0', name='training_duration'),
         CheckConstraint("attendance in ('planned','attended','missed')", name='training_attendance'),

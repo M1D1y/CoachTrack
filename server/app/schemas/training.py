@@ -1,11 +1,12 @@
 from datetime import date as Date, datetime, time as Time
+from uuid import UUID
 from typing import Literal
 
 from pydantic import BaseModel, Field
 from .user import Read
 
 class TrainingCreate(BaseModel):
-    athlete_id: int
+    athlete_public_id: UUID
     date: Date
     time: Time
     duration_minutes: int = Field(gt=0)
@@ -27,7 +28,7 @@ class AttendanceUpdate(BaseModel):
 
 class TrainingOut(Read):
     id: int
-    athlete_id: int
+    athlete_public_id: UUID
     date: Date
     time: Time
     duration_minutes: int

@@ -1,4 +1,4 @@
-from .auth import Register, Login, TokenPair, RefreshIn
+from .auth import Register, Login, TokenPair, AccessOut
 from .user import UserOut, UserUpdate
 from .athlete import SearchUser
 from .invitation import InvitationCreate, InvitationOut

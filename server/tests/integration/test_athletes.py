@@ -2,15 +2,17 @@ import pytest
 from .helpers import auth, login, register, attach
 pytestmark = pytest.mark.integration
 
-def test_search_by_id_and_name(client):
+def test_search_by_fio_without_internal_ids(client):
     trainer = register(client, 'Смирнов Алексей Сергеевич', 'trainer')
     athlete = register(client, 'Иванова Мария Андреевна', 'athlete')
     token = login(client, trainer)['access_token']
-    for query in [str(athlete), 'мария', 'иванова', 'андреевна', 'Иванова Мария',
+    for query in ['мария', 'иванова', 'андреевна', 'Иванова Мария',
                   '  Иванова   Мария Андреевна  ']:
         result = client.get('/api/v1/athletes/search', params={'q': query}, headers=auth(token)).json()
-        assert result[0]['id'] == athlete
-        assert set(result[0]) == {'id', 'name', 'sport', 'relationship_status'}
+        assert result[0]['public_id'] == athlete
+        assert set(result[0]) == {'public_id', 'name', 'sport', 'relationship_status'}
+    assert client.get('/api/v1/athletes/search', params={'q': '123'}, headers=auth(token)).status_code == 422
+    assert client.get('/api/v1/athletes/search', params={'q': 'Ма'}, headers=auth(token)).status_code == 422
     assert client.get('/api/v1/athletes/search', params={'q': 'Несуществующий'}, headers=auth(token)).json() == []
     assert client.get('/api/v1/athletes/search', params={'q': ' '}, headers=auth(token)).status_code == 422
 
@@ -23,8 +25,8 @@ def test_team_list_is_scoped_to_trainer(client):
     athlete_token = login(client, athlete)['access_token']
     assert client.get('/api/v1/athletes', headers=auth(token_a)).json() == []
     attach(client, token_a, athlete_token, athlete)
-    assert client.get('/api/v1/athletes', params={'q': 'Иванова'}, headers=auth(token_a)).json()[0]['id'] == athlete
+    assert client.get('/api/v1/athletes', params={'q': 'Иванова'}, headers=auth(token_a)).json()[0]['public_id'] == athlete
     assert client.get('/api/v1/athletes', headers=auth(token_b)).json() == []
-    result = client.get('/api/v1/athletes/search', params={'q': str(athlete)}, headers=auth(token_b)).json()[0]
+    result = client.get('/api/v1/athletes/search', params={'q': 'Иванова'}, headers=auth(token_b)).json()[0]
     assert result['relationship_status'] == 'unavailable'
     assert 'password_hash' not in result

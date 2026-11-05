@@ -16,7 +16,7 @@ def test_cross_team_and_cross_athlete_access(client):
     athlete_token_b = login(client, athlete_b)['access_token']
     attach(client, token_a, athlete_token_a, athlete_a)
     attach(client, token_b, athlete_token_b, athlete_b)
-    payload = {'athlete_id': athlete_a, 'date': week(), 'time': '09:00', 'duration_minutes': 30, 'title': 'Бег'}
+    payload = {'athlete_public_id': athlete_a, 'date': week(), 'time': '09:00', 'duration_minutes': 30, 'title': 'Бег'}
     training = client.post('/api/v1/trainings', json=payload, headers=auth(token_a))
     training_id = training.json()['id']
     assert client.post('/api/v1/trainings', json=payload, headers=auth(athlete_token_a)).status_code == 403
@@ -28,6 +28,9 @@ def test_cross_team_and_cross_athlete_access(client):
     assert client.get(f'/api/v1/athletes/{athlete_a}/nutrition', headers=auth(athlete_token_b)).status_code == 404
     assert client.get(f'/api/v1/athletes/{athlete_a}/injuries', headers=auth(token_b)).status_code == 404
     assert client.get(f'/api/v1/athletes/{athlete_a}/reports/summary', headers=auth(token_b)).status_code == 404
+    assert client.get('/api/v1/athletes/123/injuries', headers=auth(token_a)).status_code == 422
+    assert client.delete('/api/v1/team/athletes/123', headers=auth(token_a)).status_code == 422
+    assert client.post('/api/v1/invitations', json={'athlete_public_id': 123}, headers=auth(token_a)).status_code == 422
     assert client.delete(f'/api/v1/team/athletes/{athlete_a}', headers=auth(token_a)).status_code == 204
     assert client.get(f'/api/v1/trainings/{training_id}', headers=auth(token_a)).status_code == 404
 

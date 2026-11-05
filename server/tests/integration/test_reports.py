@@ -15,7 +15,7 @@ def test_aggregates_from_postgresql(client):
     attach(client, trainer_token, athlete_token, athlete)
     for status in ('attended', 'missed', 'planned'):
         created = client.post('/api/v1/trainings', json={
-            'athlete_id': athlete, 'date': week(), 'time': '09:00',
+            'athlete_public_id': athlete, 'date': week(), 'time': '09:00',
             'duration_minutes': 30, 'title': status,
         }, headers=auth(trainer_token))
         assert created.status_code == 201

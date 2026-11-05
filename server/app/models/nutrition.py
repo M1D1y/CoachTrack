@@ -1,7 +1,8 @@
 from datetime import date
 
 from sqlalchemy import Date, ForeignKey, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from .user import User
 
 from ..db.base import Base
 
@@ -12,3 +13,8 @@ class Nutrition(Base):
     date: Mapped[date] = mapped_column(Date)
     title: Mapped[str] = mapped_column(String(200))
     note: Mapped[str] = mapped_column(Text, default='')
+    athlete: Mapped[User] = relationship()
+
+    @property
+    def athlete_public_id(self):
+        return self.athlete.public_id

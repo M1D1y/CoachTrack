@@ -1,4 +1,5 @@
 from datetime import date
+from uuid import UUID
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -19,7 +20,7 @@ def summary(week_start: date | None = None, user: User = Depends(current_user), 
 
 @router.get('/athletes/{athlete_id}/reports/summary', response_model=Summary, tags=['reports'])
 def athlete_summary(
-    athlete_id: int, week_start: date | None = None,
+    athlete_id: UUID, week_start: date | None = None,
     user: User = Depends(current_user), db: Session = Depends(get_db),
 ):
     return report_service.athlete_summary(db, user, athlete_id, week_start)

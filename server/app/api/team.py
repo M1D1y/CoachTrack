@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Response
+from uuid import UUID
 from sqlalchemy.orm import Session
 
 from ..core.dependencies import current_user
@@ -22,6 +23,6 @@ def leave_team(user: User = Depends(current_user), db: Session = Depends(get_db)
 
 
 @router.delete('/team/athletes/{athlete_id}', status_code=204, tags=['team'])
-def remove_athlete(athlete_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def remove_athlete(athlete_id: UUID, user: User = Depends(current_user), db: Session = Depends(get_db)):
     detach_athlete(db, user, athlete_id)
     return Response(status_code=204)

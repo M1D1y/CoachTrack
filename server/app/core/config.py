@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = Field(30, gt=0)
     refresh_token_expire_days: int = Field(7, gt=0)
     cors_origins: str = 'http://localhost:5173'
+    refresh_cookie_secure: bool = False
 
     @field_validator('jwt_secret_key')
     @classmethod

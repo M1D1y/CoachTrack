@@ -1,4 +1,5 @@
 from datetime import date as Date
+from uuid import UUID
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -22,7 +23,7 @@ class InjuryUpdate(BaseModel):
 
 class InjuryOut(Read):
     id: int
-    athlete_id: int
+    athlete_public_id: UUID
     title: str
     date: Date
     note: str

@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
+from uuid import UUID, uuid4
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, String, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Uuid, UniqueConstraint, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db.base import Base
@@ -12,6 +13,7 @@ def now():
 class User(Base):
     __tablename__ = 'users'
     id: Mapped[int] = mapped_column(primary_key=True)
+    public_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), default=uuid4, server_default=text('gen_random_uuid()'), nullable=False)
     name: Mapped[str] = mapped_column(String(200))
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(20))
@@ -21,6 +23,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     trainer: Mapped['User | None'] = relationship(remote_side='User.id', foreign_keys=[trainer_id])
     __table_args__ = (
+        UniqueConstraint('public_id', name='uq_users_public_id'),
         CheckConstraint("role in ('trainer','athlete')", name='user_role'),
         CheckConstraint("role = 'athlete' OR trainer_id IS NULL", name='trainer_no_trainer'),
     )

@@ -1,19 +1,20 @@
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from uuid import UUID
 
 from ..core.dependencies import require_role
 from ..models import User
 
 
-def detach_athlete(db: Session, user: User, athlete_id: int | None = None) -> None:
-    if athlete_id is None:
+def detach_athlete(db: Session, user: User, athlete_public_id: UUID | None = None) -> None:
+    if athlete_public_id is None:
         require_role(user, 'athlete')
-        athlete_id = user.id
+        athlete_public_id = user.public_id
     else:
         require_role(user, 'trainer')
     athlete = db.scalar(
-        select(User).where(User.id == athlete_id)
+        select(User).where(User.public_id == athlete_public_id)
         .with_for_update()
         .execution_options(populate_existing=True)
     )

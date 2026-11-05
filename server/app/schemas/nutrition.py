@@ -1,4 +1,5 @@
 from datetime import date as Date
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 from .user import Read
@@ -17,7 +18,7 @@ class NutritionUpdate(BaseModel):
 
 class NutritionOut(Read):
     id: int
-    athlete_id: int
+    athlete_public_id: UUID
     date: Date
     title: str
     note: str

@@ -1,12 +1,14 @@
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
+from uuid import UUID
 
 import jwt
 import pytest
 
 from app.core.config import settings
-from app.core.security import hash_password
-from app.models import User
+from app.core.security import digest, hash_password
+from app.models import RefreshToken, User
+from sqlalchemy import select
 from app.services import auth as auth_service
 from .conftest import Session
 
@@ -19,6 +21,8 @@ def test_register_login_refresh_logout(client):
     trainer = register(client, 'Смирнов Алексей Сергеевич', 'trainer')
     athlete = register(client, 'Иванова Мария Андреевна', 'athlete')
     assert trainer != athlete
+    assert UUID(trainer).version == 4
+    assert UUID(athlete).version == 4
     assert client.post('/api/v1/auth/login', json={
         'name': 'Смирнов Алексей Сергеевич', 'password': 'wrong',
     }).status_code == 401
@@ -26,10 +30,19 @@ def test_register_login_refresh_logout(client):
         'name': 'Несуществующий Иван Иванович', 'password': 'StrongPassword123!',
     }).status_code == 401
     trainer_tokens = login(client, trainer)
-    athlete_tokens = login(client, athlete)
+    first_cookie = client.cookies.get('coachtrack_refresh')
+    assert first_cookie
     claims = jwt.decode(trainer_tokens['access_token'], settings().jwt_secret_key, algorithms=['HS256'])
     assert claims['sub'] == str(trainer)
     trainer_auth = auth(trainer_tokens['access_token'])
+    rotated = client.post('/api/v1/auth/refresh').json()
+    assert 'refresh_token' not in rotated
+    assert client.cookies.get('coachtrack_refresh') != first_cookie
+    with Session() as db:
+        assert db.scalar(select(RefreshToken).where(RefreshToken.token_hash == digest(first_cookie))).revoked_at is not None
+    assert client.post('/api/v1/auth/logout', headers=auth(rotated['access_token'])).status_code == 204
+    assert client.post('/api/v1/auth/refresh').status_code == 401
+    athlete_tokens = login(client, athlete)
     athlete_auth = auth(athlete_tokens['access_token'])
     assert client.get('/api/v1/users/me', headers=trainer_auth).json()['role'] == 'trainer'
     assert client.get('/api/v1/users/me', headers=athlete_auth).json()['role'] == 'athlete'
@@ -37,6 +50,7 @@ def test_register_login_refresh_logout(client):
     assert client.get('/api/v1/trainings', headers=athlete_auth).json() == []
     assert client.get('/api/v1/users/me').status_code == 401
     assert client.get('/api/v1/users/me', headers=auth('not-a-jwt')).status_code == 401
+    assert client.post('/api/v1/auth/refresh', headers={'Origin': 'http://evil.example'}).status_code == 403
     assert client.patch('/api/v1/users/me', json={
         'name': '  Иванова   Мария Владимировна ',
     }, headers=athlete_auth).json()['name'] == 'Иванова Мария Владимировна'
@@ -46,11 +60,6 @@ def test_register_login_refresh_logout(client):
     assert client.post('/api/v1/auth/login', json={
         'name': 'Иванова Мария Андреевна', 'password': 'StrongPassword123!',
     }).status_code == 401
-    rotated = client.post('/api/v1/auth/refresh', json={'refresh_token': trainer_tokens['refresh_token']}).json()
-    assert rotated['refresh_token'] != trainer_tokens['refresh_token']
-    assert client.post('/api/v1/auth/refresh', json={'refresh_token': trainer_tokens['refresh_token']}).status_code == 401
-    assert client.post('/api/v1/auth/logout', json={'refresh_token': rotated['refresh_token']}, headers=auth(rotated['access_token'])).status_code == 204
-    assert client.post('/api/v1/auth/refresh', json={'refresh_token': rotated['refresh_token']}).status_code == 401
 
 
 def test_login_normalizes_fio_and_duplicate_registration_is_rejected(client):
@@ -60,7 +69,7 @@ def test_login_normalizes_fio_and_duplicate_registration_is_rejected(client):
     })
     assert response.status_code == 200
     token = response.json()['access_token']
-    assert client.get('/api/v1/users/me', headers=auth(token)).json()['id'] == user_id
+    assert client.get('/api/v1/users/me', headers=auth(token)).json()['public_id'] == user_id
 
     duplicate = client.post('/api/v1/auth/register', json={
         'last_name': 'соколова', 'first_name': 'МАРИЯ', 'patronymic': 'андреевна',
@@ -84,7 +93,7 @@ def test_profile_name_must_be_complete_and_unique(client):
         'name': '  СОКОЛОВА   мария Андреевна ',
     }, headers=headers)
     assert duplicate.status_code == 409
-    assert client.get('/api/v1/users/me', headers=headers).json()['id'] == second
+    assert client.get('/api/v1/users/me', headers=headers).json()['public_id'] == second
     assert first != second
 
 
@@ -93,14 +102,14 @@ def test_existing_two_part_name_can_login_until_profile_update(client):
         user = User(name='Старый Пользователь', role='athlete', password_hash=hash_password('StrongPassword123!'))
         db.add(user)
         db.commit()
-        user_id = user.id
+        user_id = str(user.public_id)
 
     response = client.post('/api/v1/auth/login', json={
         'name': '  старый   пользователь ', 'password': 'StrongPassword123!',
     })
     assert response.status_code == 200
     headers = auth(response.json()['access_token'])
-    assert client.get('/api/v1/users/me', headers=headers).json()['id'] == user_id
+    assert client.get('/api/v1/users/me', headers=headers).json()['public_id'] == user_id
     updated = client.patch('/api/v1/users/me', json={
         'name': 'Старый Пользователь Иванович',
     }, headers=headers)

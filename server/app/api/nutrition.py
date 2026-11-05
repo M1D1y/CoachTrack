@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Response
+from uuid import UUID
 from sqlalchemy.orm import Session
 
 from ..core.dependencies import current_user
@@ -11,12 +12,12 @@ router = APIRouter()
 
 
 @router.get('/athletes/{athlete_id}/nutrition', response_model=list[NutritionOut], tags=['nutrition'])
-def list_nutrition(athlete_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def list_nutrition(athlete_id: UUID, user: User = Depends(current_user), db: Session = Depends(get_db)):
     return nutrition_service.list_nutrition(db, user, athlete_id)
 
 
 @router.post('/athletes/{athlete_id}/nutrition', response_model=NutritionOut, status_code=201, tags=['nutrition'])
-def create_nutrition(athlete_id: int, body: NutritionCreate, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def create_nutrition(athlete_id: UUID, body: NutritionCreate, user: User = Depends(current_user), db: Session = Depends(get_db)):
     return nutrition_service.create_nutrition(db, user, athlete_id, body)
 
 

@@ -1,4 +1,5 @@
 import pytest
+from uuid import uuid4
 from pydantic import ValidationError
 
 from app.schemas.auth import Register
@@ -29,7 +30,7 @@ def test_registration_rejects_unknown_role():
 
 def test_training_rejects_negative_duration():
     with pytest.raises(ValidationError):
-        TrainingCreate(athlete_id=1, date='2026-10-19', time='09:00', duration_minutes=-5, title='Бег')
+        TrainingCreate(athlete_public_id=uuid4(), date='2026-10-19', time='09:00', duration_minutes=-5, title='Бег')
 
 
 def test_attendance_rejects_unknown_status():

@@ -55,5 +55,6 @@ def client():
 
     app.dependency_overrides[get_db] = db_override
     with TestClient(app) as test_client:
+        test_client.headers.update({'Origin': 'http://localhost:5173'})
         yield test_client
     app.dependency_overrides.clear()

@@ -1,10 +1,11 @@
 from datetime import date, timedelta
+from uuid import UUID
 
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..core.dependencies import athlete_access, require_role
+from ..core.dependencies import athlete_access, athlete_by_public_id, require_role
 from ..models import Training, User
 from ..schemas.training import AttendanceUpdate, TrainingCreate, TrainingUpdate
 from .reports import normalized_week
@@ -32,8 +33,10 @@ def get_training(db: Session, user: User, training_id: int, write: bool = False)
 
 def create_training(db: Session, user: User, body: TrainingCreate) -> Training:
     require_role(user, 'trainer')
-    athlete_access(db, user, body.athlete_id, write=True)
-    item = Training(**body.model_dump(), attendance='planned')
+    athlete = athlete_by_public_id(db, body.athlete_public_id)
+    athlete_access(db, user, athlete.id, write=True)
+    values = body.model_dump(exclude={'athlete_public_id'})
+    item = Training(athlete_id=athlete.id, **values, attendance='planned')
     db.add(item)
     db.commit()
     db.refresh(item)

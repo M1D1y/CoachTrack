@@ -1,4 +1,5 @@
 from datetime import datetime
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from ..core.names import validate_full_name
@@ -8,12 +9,11 @@ class Read(BaseModel):
 
 
 class UserOut(Read):
-    id: int
+    public_id: UUID
     name: str
     role: str
     age: int | None
     sport: str | None
-    trainer_id: int | None
     created_at: datetime
 
 
